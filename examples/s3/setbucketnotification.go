@@ -24,9 +24,9 @@ import (
 	"context"
 	"log"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/notification"
+	"github.com/imkos/minio-go/v7"
+	"github.com/imkos/minio-go/v7/pkg/credentials"
+	"github.com/imkos/minio-go/v7/pkg/notification"
 )
 
 func main() {

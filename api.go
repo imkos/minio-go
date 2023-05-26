@@ -38,10 +38,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/imkos/minio-go/v7/pkg/credentials"
+	"github.com/imkos/minio-go/v7/pkg/s3utils"
+	"github.com/imkos/minio-go/v7/pkg/signer"
 	md5simd "github.com/minio/md5-simd"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio-go/v7/pkg/signer"
 	"golang.org/x/net/publicsuffix"
 )
 

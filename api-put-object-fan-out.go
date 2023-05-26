@@ -28,7 +28,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/imkos/minio-go/v7/pkg/encrypt"
 )
 
 // PutObjectFanOutEntry is per object entry fan-out metadata

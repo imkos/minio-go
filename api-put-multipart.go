@@ -13,7 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/imkos/minio-go/v7/pkg/s3utils"
 )
 
 type MultipartUploader struct {

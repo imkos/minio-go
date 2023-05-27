@@ -16,6 +16,17 @@ import (
 	"github.com/imkos/minio-go/v7/pkg/s3utils"
 )
 
+type ObjectPartData struct {
+	PartSeq   int        `json:"partSeq"`
+	PartsInfo ObjectPart `json:"partsInfo"`
+	CrcByte   []byte     `json:"crcByte"`
+}
+
+type IObjectPartsStore interface {
+	Get(int) (*ObjectPartData, bool)
+	Set(*ObjectPartData) error
+}
+
 type MultipartUploader struct {
 	BucketName        string
 	ObjectName        string
@@ -24,14 +35,14 @@ type MultipartUploader struct {
 	ObjectSize        int64
 	PartSize          int64
 	TotalUploadedSize int64
-	partsInfo         map[int]ObjectPart
-	crcByte           map[int][]byte
+	store             IObjectPartsStore
 	client            *Client
 	opts              *PutObjectOptions
 	mux               sync.RWMutex
 }
 
-func (c *Client) NewUploadID(ctx context.Context, bucketName, objectName string, objectSize int64, opts *PutObjectOptions) (*MultipartUploader, error) {
+// store is not nil.
+func (c *Client) NewUploadID(ctx context.Context, bucketName, objectName string, objectSize int64, opts *PutObjectOptions, ops IObjectPartsStore) (*MultipartUploader, error) {
 	var err error
 	// Input validation.
 	if err = s3utils.CheckValidBucketName(bucketName); err != nil {
@@ -39,6 +50,10 @@ func (c *Client) NewUploadID(ctx context.Context, bucketName, objectName string,
 	}
 	if err = s3utils.CheckValidObjectName(objectName); err != nil {
 		return &MultipartUploader{}, err
+	}
+
+	if ops == nil {
+		return &MultipartUploader{}, errors.New("ObjectPartsStore Can not be nil.")
 	}
 
 	var totalPartsCount int
@@ -74,8 +89,7 @@ func (c *Client) NewUploadID(ctx context.Context, bucketName, objectName string,
 		ObjectSize:        objectSize,
 		TotalUploadedSize: 0,
 		opts:              opts,
-		partsInfo:         make(map[int]ObjectPart), // Initialize parts uploaded map.
-		crcByte:           make(map[int][]byte),
+		store:             ops,
 	}, nil
 }
 
@@ -128,9 +142,11 @@ func (p *MultipartUploader) UploadPart(ctx context.Context, reader io.Reader, pa
 
 	p.mux.Lock()
 	// Save successfully uploaded part metadata.
-	p.partsInfo[partNumber] = objPart
-
-	p.crcByte[partNumber] = crcBytes
+	p.store.Set(&ObjectPartData{
+		PartSeq:   partNumber,
+		PartsInfo: objPart,
+		CrcByte:   crcBytes,
+	})
 	p.mux.Unlock()
 	// Save successfully uploaded size.
 	atomic.AddInt64(&p.TotalUploadedSize, bodySize)
@@ -148,18 +164,18 @@ func (p *MultipartUploader) complMultipartUpload() (*completeMultipartUpload, []
 	// Loop over total uploaded parts to save them in
 	// Parts array before completing the multipart request.
 	for i := 1; i <= p.TotalPartsCount; i++ {
-		part, ok := p.partsInfo[i]
+		opd, ok := p.store.Get(i)
 		if !ok {
 			return nil, nil, errInvalidArgument(fmt.Sprintf("Missing part number %d", i))
 		}
-		crcBytes = append(crcBytes, p.crcByte[i]...)
+		crcBytes = append(crcBytes, opd.CrcByte...)
 		complMultipartUpload.Parts = append(complMultipartUpload.Parts, CompletePart{
-			ETag:           part.ETag,
-			PartNumber:     part.PartNumber,
-			ChecksumCRC32:  part.ChecksumCRC32,
-			ChecksumCRC32C: part.ChecksumCRC32C,
-			ChecksumSHA1:   part.ChecksumSHA1,
-			ChecksumSHA256: part.ChecksumSHA256,
+			ETag:           opd.PartsInfo.ETag,
+			PartNumber:     opd.PartsInfo.PartNumber,
+			ChecksumCRC32:  opd.PartsInfo.ChecksumCRC32,
+			ChecksumCRC32C: opd.PartsInfo.ChecksumCRC32C,
+			ChecksumSHA1:   opd.PartsInfo.ChecksumSHA1,
+			ChecksumSHA256: opd.PartsInfo.ChecksumSHA256,
 		})
 	}
 

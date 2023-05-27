@@ -23,8 +23,8 @@ type ObjectPartData struct {
 }
 
 type IObjectPartsStore interface {
-	Get(int) (*ObjectPartData, bool)
-	Set(*ObjectPartData) error
+	Get(string, int) (*ObjectPartData, bool)
+	Set(string, *ObjectPartData) error
 }
 
 type MultipartUploader struct {
@@ -142,7 +142,7 @@ func (p *MultipartUploader) UploadPart(ctx context.Context, reader io.Reader, pa
 
 	p.mux.Lock()
 	// Save successfully uploaded part metadata.
-	p.store.Set(&ObjectPartData{
+	p.store.Set(p.UploadID, &ObjectPartData{
 		PartSeq:   partNumber,
 		PartsInfo: objPart,
 		CrcByte:   crcBytes,
@@ -164,7 +164,7 @@ func (p *MultipartUploader) complMultipartUpload() (*completeMultipartUpload, []
 	// Loop over total uploaded parts to save them in
 	// Parts array before completing the multipart request.
 	for i := 1; i <= p.TotalPartsCount; i++ {
-		opd, ok := p.store.Get(i)
+		opd, ok := p.store.Get(p.UploadID, i)
 		if !ok {
 			return nil, nil, errInvalidArgument(fmt.Sprintf("Missing part number %d", i))
 		}

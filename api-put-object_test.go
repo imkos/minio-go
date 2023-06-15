@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minio/minio-go/v7/pkg/encrypt"
+	"github.com/imkos/minio-go/v7/pkg/encrypt"
 )
 
 func TestPutObjectOptionsValidate(t *testing.T) {
@@ -82,7 +82,6 @@ func Test_SSEHeaders(t *testing.T) {
 	c, err := New("s3.amazonaws.com", &Options{
 		Transport: rt,
 	})
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -147,7 +146,6 @@ func Test_SSEHeaders(t *testing.T) {
 				uploadID:   "upId",
 				sse:        opts.ServerSideEncryption,
 			})
-
 			if err != nil {
 				t.Error(err)
 			}
@@ -167,5 +165,4 @@ func Test_SSEHeaders(t *testing.T) {
 			}
 		})
 	}
-
 }
